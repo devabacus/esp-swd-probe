@@ -20,6 +20,8 @@
 #include "tinyusb_default_config.h"
 
 #include "main/dap_configuration.h"
+#include "DAP_config.h" // DAP_PACKET_COUNT
+#include "main/dap_pktring.h"
 #include "main/usb_dap.h"
 
 extern uint32_t DAP_ExecuteCommand(const uint8_t *request, uint8_t *response);
@@ -110,7 +112,11 @@ bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_requ
 }
 
 // ---- DAP packets ----
+// Приём по границам USB-передач: RX_BUFSIZE=0, пакет приходит в tud_vendor_rx_cb целиком и кладётся в кольцо
+// из DAP_PACKET_COUNT пакетов (main/dap_pktring.*). Поток байт (прежнее tud_vendor_read) склеивал два коротких запроса.
 static TaskHandle_t sDapTask;
+static dap_pkt_t sSlots[DAP_PACKET_COUNT];
+static dap_pktring_t sRing;
 
 #if CFG_TUD_API_V0_19_COMPAT
 void tud_vendor_rx_cb(uint8_t idx, const uint8_t *buffer, uint16_t bufsize)
@@ -118,7 +124,10 @@ void tud_vendor_rx_cb(uint8_t idx, const uint8_t *buffer, uint16_t bufsize)
 void tud_vendor_rx_cb(uint8_t idx, const uint8_t *buffer, uint32_t bufsize)
 #endif
 {
-    (void)idx; (void)buffer; (void)bufsize;
+    (void)idx;
+    // Переполнение — пакет теряется и считается (хост шлёт не более DAP_PACKET_COUNT запросов, переполнения быть не должно).
+    dap_pktring_push(&sRing, buffer, bufsize);
+    // буфер действителен только внутри коллбэка (скопировали); приём TinyUSB перевооружает сам после возврата
     if (sDapTask) {
         xTaskNotifyGive(sDapTask); // runs in the TinyUSB task, not in an ISR
     }
@@ -126,22 +135,21 @@ void tud_vendor_rx_cb(uint8_t idx, const uint8_t *buffer, uint32_t bufsize)
 
 static void dap_usb_task(void *arg)
 {
-    static uint8_t req[DAP_PACKET_SIZE];
+    static dap_pkt_t pkt;
     static uint8_t resp[DAP_PACKET_SIZE];
 
     for (;;) {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-        while (tud_vendor_available()) {
-            uint32_t n = tud_vendor_read(req, sizeof(req));
-            if (n == 0) {
-                break;
+        // по одному, ответ строго по порядку запросов
+        while (dap_pktring_pop(&sRing, &pkt)) {
+            if (pkt.len == 0) {
+                continue;
             }
-            uint32_t r = DAP_ExecuteCommand(req, resp) & 0xFFFF;
-            // the host reads exactly one response per request
+            uint32_t r = DAP_ExecuteCommand(pkt.data, resp) & 0xFFFF;
+            // без FIFO tud_vendor_write отправляет ≤ EPSIZE одной передачей, 0 — предыдущий ответ ещё в пути
             uint32_t sent = 0;
             while (sent < r) {
                 uint32_t w = tud_vendor_write(resp + sent, r - sent);
-                tud_vendor_write_flush();
                 sent += w;
                 if (w == 0) {
                     vTaskDelay(1);
@@ -159,6 +167,7 @@ void usb_dap_start(void)
     cfg.descriptor.string_count = sizeof(kStrings) / sizeof(kStrings[0]);
     cfg.descriptor.full_speed_config = kConfig;
 
+    dap_pktring_init(&sRing, sSlots, DAP_PACKET_COUNT);
     xTaskCreatePinnedToCore(dap_usb_task, "dap_usb", 4096, NULL, 10, &sDapTask, 1);
     ESP_ERROR_CHECK(tinyusb_driver_install(&cfg));
     ESP_LOGI(TAG, "CMSIS-DAP v2 on native USB, packet %d bytes", DAP_PACKET_SIZE);

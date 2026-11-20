@@ -148,10 +148,9 @@ This information includes:
 /// debugger and depends on the USB peripheral. For devices with limited RAM or USB buffer the
 /// setting can be reduced (valid range is 1 .. 255).
 #if defined CONFIG_IDF_TARGET_ESP32S3
-// Нативный USB S3 (main/usb_dap.c): vendor-FIFO 64 байта читается потоком, границ пакетов нет — при очереди
-// запросов два коротких склеиваются в одно чтение, второй теряется («CMSIS-DAP command mismatch», стенд 20.11).
-// Один пакет в пути — хост ждёт ответ перед следующим. Ускорение — чтение по границам передач (следующая правка).
-#define DAP_PACKET_COUNT 1
+// Нативный USB S3 (main/usb_dap.c): приём по границам USB-передач (RX_BUFSIZE=0, кольцо main/dap_pktring.*),
+// склейки запросов нет — можно держать очередь пакетов. 8 — запас под конвейер OpenOCD/pyOCD, подстраивается при замере на стенде.
+#define DAP_PACKET_COUNT 8
 #else
 #define DAP_PACKET_COUNT 255 ///< Specifies number of packets buffered.
 #endif

@@ -8,7 +8,7 @@ if(CONFIG_USE_WEBSOCKET_DAP)
 endif()
 
 if(CONFIG_DAP_TRANSPORT_USB)
-    list(APPEND COMPONENT_SRCS "usb_dap.c")
+    list(APPEND COMPONENT_SRCS "usb_dap.c" "dap_pktring.c")
 endif()
 
 register_component()
