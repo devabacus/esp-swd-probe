@@ -5,4 +5,4 @@ tmp/
 sdkconfig
 sdkconfig.old
 managed_components/
-.cache/
+.cache/__pycache__/

@@ -89,6 +89,80 @@ menu "wireless dap config"
             range 1 48
     endmenu
 
+    menu "Target voltage (VTref, ESP32-S3)"
+        depends on IDF_TARGET_ESP32S3
+
+        config DAP_VTREF_ENABLE
+            bool "Measure the target supply on an ADC pin (VTref)"
+            default y
+            help
+                Reads the target rail through ADC1 (12 dB attenuation, curve-fitting
+                calibration), logs it and returns it to the host with the vendor
+                command 0x80 (see tools/vtref.py).
+
+        config DAP_PIN_VTREF
+            int "VTref GPIO (ADC1)"
+            depends on DAP_VTREF_ENABLE
+            default 1
+            range 1 10
+            help
+                ADC1 pin of the devkit: GPIO1..10 (channel = GPIO-1). Free on the
+                YD-ESP32-S3 with the default SWD pins (4/5/6, JTAG 9/10/14): 1, 2, 7, 8.
+                Same forbidden pins as the SWD pins (checked at build time).
+                WITHOUT a divider the pin must not see more than 3.3 V.
+
+        config DAP_VTREF_DIV_TOP_OHM
+            int "Divider: resistor from the target rail to the pin, Ohm"
+            depends on DAP_VTREF_ENABLE
+            default 0
+            help
+                0 together with bottom 0 = no divider (default: the ADC measures up to
+                3.3 V on its own). With a divider: mV = pin_mV * (top+bottom) / bottom.
+
+        config DAP_VTREF_DIV_BOTTOM_OHM
+            int "Divider: resistor from the pin to GND, Ohm"
+            depends on DAP_VTREF_ENABLE
+            default 0
+            help
+                0 = no divider.
+
+        config DAP_VTREF_FULLSCALE_MV
+            int "Fallback full scale at 12 dB, mV"
+            depends on DAP_VTREF_ENABLE
+            default 3100
+            help
+                Used ONLY when the chip has no calibration scheme (linear fallback).
+
+        config DAP_VTREF_SAMPLES
+            int "ADC samples averaged per measurement"
+            depends on DAP_VTREF_ENABLE
+            default 16
+            range 1 64
+
+        config DAP_VTREF_LOG_PERIOD_MS
+            int "VTref log period, ms (0 = log only at start)"
+            depends on DAP_VTREF_ENABLE
+            default 2000
+            range 0 600000
+
+        config DAP_VTREF_NONE_BELOW_MV
+            int "Below this, the target is considered unpowered, mV"
+            depends on DAP_VTREF_ENABLE
+            default 1200
+            help
+                Threshold SETTING: tune for the object (a 1.8 V target may sag to 1.62 V).
+
+        config DAP_VTREF_DIRECT_MIN_MV
+            int "From this, the target is 3.3 V (direct connection), mV"
+            depends on DAP_VTREF_ENABLE
+            default 2700
+
+        config DAP_VTREF_OVER_MV
+            int "From this, the target is too high for 3.3 V pins, mV"
+            depends on DAP_VTREF_ENABLE
+            default 3600
+    endmenu
+
     config DAP_SWD_CLOCK_HZ
         int "Default SWD/JTAG clock, Hz"
         default 1000000

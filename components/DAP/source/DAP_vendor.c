@@ -28,6 +28,11 @@
 #include "components/DAP/config/DAP_config.h"
 #include "components/DAP/include/DAP.h"
 #include "components/elaphureLink/elaphureLink_protocol.h"
+#include "sdkconfig.h"
+
+#ifdef CONFIG_DAP_VTREF_ENABLE
+#include "vtref.h"
+#endif
 
 //**************************************************************************************************
 /**
@@ -53,7 +58,19 @@ uint32_t DAP_ProcessVendorCommand(const uint8_t *request, uint8_t *response) {
 
   switch (*request++) {          // first byte in request is Command ID
     case ID_DAP_Vendor0:
-#if 0                            // example user command
+#ifdef CONFIG_DAP_VTREF_ENABLE
+      // Vendor 0x80: target voltage (VTref). Response: ID, mV lo, mV hi, class
+      // (0 none, 1 1.8V, 2 3.3V, 3 over). See tools/vtref.py.
+      {
+        uint16_t mv = 0;
+        uint8_t cls = 0;
+        vtref_get(&mv, &cls);
+        response[0] = (uint8_t)(mv & 0xFFU);
+        response[1] = (uint8_t)(mv >> 8);
+        response[2] = cls;
+        num = (1U << 16) | 4U;
+      }
+#elif 0                            // example user command
       num += 1U << 16;           // increment request count
       if (*request == 1U) {      // when first command data byte is 1
         *response++ = 'X';       // send 'X' as response

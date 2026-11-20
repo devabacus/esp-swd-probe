@@ -410,6 +410,13 @@ __STATIC_INLINE uint8_t DAP_GetProductFirmwareVersionString (char *str) {
   _Static_assert(!DAP_PIN_FORBIDDEN(CONFIG_DAP_PIN_TDO), "DAP_PIN_TDO: forbidden GPIO");
   _Static_assert(!DAP_PIN_FORBIDDEN(CONFIG_DAP_PIN_TDI), "DAP_PIN_TDI: forbidden GPIO");
   _Static_assert(!DAP_PIN_FORBIDDEN(CONFIG_DAP_PIN_NTRST), "DAP_PIN_NTRST: forbidden GPIO");
+#ifdef CONFIG_DAP_VTREF_ENABLE
+  _Static_assert(!DAP_PIN_FORBIDDEN(CONFIG_DAP_PIN_VTREF), "DAP_PIN_VTREF: forbidden GPIO");
+  _Static_assert(CONFIG_DAP_PIN_VTREF != CONFIG_DAP_PIN_SWDIO && CONFIG_DAP_PIN_VTREF != CONFIG_DAP_PIN_SWCLK &&
+                 CONFIG_DAP_PIN_VTREF != CONFIG_DAP_PIN_NRESET && CONFIG_DAP_PIN_VTREF != CONFIG_DAP_PIN_TDO &&
+                 CONFIG_DAP_PIN_VTREF != CONFIG_DAP_PIN_TDI && CONFIG_DAP_PIN_VTREF != CONFIG_DAP_PIN_NTRST,
+                 "DAP_PIN_VTREF: clashes with a SWD/JTAG pin");
+#endif
 
   #define PIN_LED_CONNECTED _ // won't be used
   #define PIN_LED_RUNNING _ // won't be used

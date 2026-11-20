@@ -8,10 +8,15 @@ set(COMPONENT_SRCS
     "./source/spi_op.c"
     "./source/spi_switch.c"
     "./source/dap_utility.c"
-    "./source/swd_host.c")
+    "./source/swd_host.c"
+    "./source/vtref_calc.c")
+
+if(CONFIG_DAP_VTREF_ENABLE)
+    list(APPEND COMPONENT_SRCS "./source/vtref.c")
+endif()
 
 if(NOT IDF_TARGET STREQUAL "esp8266")
-    set(COMPONENT_REQUIRES esp_hal_gpio esp_hal_clock esp_hal_gpspi)
+    set(COMPONENT_REQUIRES esp_hal_gpio esp_hal_clock esp_hal_gpspi esp_adc)
 endif()
 
 register_component()

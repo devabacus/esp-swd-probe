@@ -20,6 +20,9 @@
 #include "main/wifi_configuration.h"
 #include "main/wifi_handle.h"
 #include "main/usb_dap.h"
+#ifdef CONFIG_DAP_VTREF_ENABLE
+#include "vtref.h"
+#endif
 
 #include "components/corsacOTA/src/corsacOTA.h"
 
@@ -105,6 +108,9 @@ void app_main() {
     // CMSIS-DAP v2 over native USB: no Wi-Fi, no USB/IP
     DAP_Setup();
     timer_init(); // timestamps for DAP (get_timer_count)
+#ifdef CONFIG_DAP_VTREF_ENABLE
+    vtref_start();
+#endif
     usb_dap_start();
     return;
 #endif
@@ -115,6 +121,9 @@ void app_main() {
     wifi_init();
     DAP_Setup();
     timer_init();
+#if defined(CONFIG_DAP_VTREF_ENABLE)
+    vtref_start();
+#endif
 
 #if (USE_MDNS == 1)
     mdns_setup();
