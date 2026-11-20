@@ -1,0 +1,34 @@
+name: s3-port
+on:
+    push:
+      paths-ignore:
+      - '**.md'
+      - 'circuit'
+    pull_request:
+      paths-ignore:
+      - '**.md'
+      - 'circuit'
+
+jobs:
+  guard:
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v5
+    - name: Сторож порта S3 (без железа)
+      run: |
+        python3 tools/check_s3_port.py
+        python3 -m unittest discover -s tools -p 'test_check*.py'
+
+  build-s3:
+    needs: guard
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        submodules: recursive
+    - name: idf.py build esp32s3
+      uses: espressif/esp-idf-ci-action@v1
+      with:
+        esp_idf_version: v6.1
+        target: esp32s3
+        path: './'
