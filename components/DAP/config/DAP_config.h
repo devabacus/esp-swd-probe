@@ -780,6 +780,7 @@ __STATIC_FORCEINLINE void PIN_SWDIO_OUT_ENABLE(void)
 #elif defined CONFIG_IDF_TARGET_ESP32C3
   SWDIO_OUT_ENABLE();
 #elif defined CONFIG_IDF_TARGET_ESP32S3
+  gpio_ll_output_enable(&GPIO, PIN_SWDIO_MOSI);   // oen_sel = 1: выход управляется регистром GPIO_ENABLE
 #endif
 }
 
@@ -799,6 +800,7 @@ __STATIC_FORCEINLINE void PIN_SWDIO_OUT_DISABLE(void)
 #elif defined CONFIG_IDF_TARGET_ESP32C3
   SWDIO_OUT_DISABLE();
 #elif defined CONFIG_IDF_TARGET_ESP32S3
+  gpio_ll_output_disable(&GPIO, PIN_SWDIO_MOSI);  // приём ответа цели: SWDIO отпущен
 #endif
 }
 

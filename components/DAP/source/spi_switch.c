@@ -11,6 +11,9 @@
  * @copyright MIT License
  *
  */
+#if defined CONFIG_IDF_TARGET_ESP32S3
+#include "hal/dedic_gpio_ll.h"
+#endif
 #include "sdkconfig.h"
 #ifdef CONFIG_IDF_TARGET_ESP32S3
 #include "esp_rom_gpio.h"
@@ -539,6 +542,14 @@ __FORCEINLINE void DAP_SPI_Deinit()
 #elif defined CONFIG_IDF_TARGET_ESP32S3
 __FORCEINLINE void DAP_SPI_Deinit()
 {
+    // Выделенный GPIO ядра (ee.set_bit_gpio_out / ee.get_gpio_in) без своего тактирования ноги не двигает:
+    // по умолчанию SYSTEM.cpu_peri_clk_en.clk_en_dedicated_gpio = 0 (esp_hal_gpio/esp32s3/include/hal/dedic_gpio_ll.h).
+    static bool s_dedic_on = false;
+    if (!s_dedic_on) {
+        _dedic_gpio_ll_enable_bus_clock(true);
+        _dedic_gpio_ll_reset_register();
+        s_dedic_on = true;
+    }
     gpio_ll_func_sel(&GPIO, CONFIG_DAP_PIN_SWCLK, PIN_FUNC_GPIO);
     gpio_ll_func_sel(&GPIO, CONFIG_DAP_PIN_SWDIO, PIN_FUNC_GPIO); // MOSI
 
