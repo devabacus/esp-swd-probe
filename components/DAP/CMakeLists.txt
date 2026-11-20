@@ -1,4 +1,4 @@
-set(COMPONENT_ADD_INCLUDEDIRS "config include $ENV{IDF_PATH}/components/esp_ringbuf/include/ $ENV{IDF_PATH}/components/")
+set(COMPONENT_ADD_INCLUDEDIRS "config include ${IDF_PATH}/components/esp_ringbuf/include/ ${IDF_PATH}/components/")
 set(COMPONENT_SRCS
     "./source/DAP.c"
     "./source/DAP_vendor.c"
