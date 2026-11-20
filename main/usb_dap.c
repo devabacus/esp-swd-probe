@@ -24,6 +24,13 @@
 #include "main/dap_pktring.h"
 #include "main/usb_dap.h"
 
+// Приём по границам передач работает ТОЛЬКО без FIFO (vendor_device.c: при CFG_TUD_VENDOR_TXRX_BUFFERED=1 tud_vendor_rx_cb
+// получает buffer=NULL, bufsize=0, данные остаются во FIFO — пакеты не доходят, хост видит «CMSIS-DAP command CMD_INFO failed»).
+// Так бывает с устаревшим sdkconfig: после правки sdkconfig.defaults* его надо удалить. Громкий отказ сборки вместо немого прибора.
+#if CFG_TUD_VENDOR_TXRX_BUFFERED
+#error "usb_dap.c: vendor FIFO включён (CONFIG_TINYUSB_VENDOR_RX_BUFSIZE>0). Удалите sdkconfig и пересоберите: нужен RX_BUFSIZE=0 из sdkconfig.defaults.esp32s3"
+#endif
+
 extern uint32_t DAP_ExecuteCommand(const uint8_t *request, uint8_t *response);
 
 static const char *TAG = "usb_dap";
@@ -114,6 +121,9 @@ bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_requ
 // ---- DAP packets ----
 // Приём по границам USB-передач: RX_BUFSIZE=0, пакет приходит в tud_vendor_rx_cb целиком и кладётся в кольцо
 // из DAP_PACKET_COUNT пакетов (main/dap_pktring.*). Поток байт (прежнее tud_vendor_read) склеивал два коротких запроса.
+#define SEND_TIMEOUT_TICKS 200 // ≈ 200 тиков FreeRTOS без прогресса записи — ответ бросаем
+#define LOG_FIRST_N 8          // сколько первых обменов печатать в журнал
+static unsigned sLogged;
 static TaskHandle_t sDapTask;
 static dap_pkt_t sSlots[DAP_PACKET_COUNT];
 static dap_pktring_t sRing;
@@ -147,13 +157,24 @@ static void dap_usb_task(void *arg)
             }
             uint32_t r = DAP_ExecuteCommand(pkt.data, resp) & 0xFFFF;
             // без FIFO tud_vendor_write отправляет ≤ EPSIZE одной передачей, 0 — предыдущий ответ ещё в пути
+            // (или конечная точка не открыта). Ждём не дольше SEND_TIMEOUT_TICKS: иначе при отсоединённом хосте задача зависает.
             uint32_t sent = 0;
+            uint32_t waited = 0;
             while (sent < r) {
                 uint32_t w = tud_vendor_write(resp + sent, r - sent);
                 sent += w;
                 if (w == 0) {
+                    if (++waited > SEND_TIMEOUT_TICKS) {
+                        ESP_LOGW(TAG, "tx timeout: cmd 0x%02x, sent %u of %u", pkt.data[0], (unsigned)sent, (unsigned)r);
+                        break;
+                    }
                     vTaskDelay(1);
                 }
+            }
+            if (sLogged < LOG_FIRST_N) { // диагностика первых обменов: доходит ли запрос и уходит ли ответ
+                sLogged++;
+                ESP_LOGI(TAG, "dap #%u: rx %u B cmd 0x%02x -> resp %u B, sent %u", (unsigned)sLogged,
+                         (unsigned)pkt.len, pkt.data[0], (unsigned)r, (unsigned)sent);
             }
         }
     }
