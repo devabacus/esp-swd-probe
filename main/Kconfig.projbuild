@@ -53,7 +53,7 @@ menu "wireless dap config"
 
         config DAP_PIN_SWDIO
             int "SWDIO GPIO (SPI MOSI)"
-            default 11
+            default 5
             range 1 48
             help
                 Free GPIO of the devkit. Forbidden: 0, 3, 45, 46 (strapping),
@@ -63,14 +63,14 @@ menu "wireless dap config"
 
         config DAP_PIN_SWCLK
             int "SWCLK GPIO (SPI CLK)"
-            default 12
+            default 4
             range 1 48
             help
                 Same limits as SWDIO. 12 is the IO_MUX pin of FSPICLK.
 
         config DAP_PIN_NRESET
             int "nRESET GPIO"
-            default 13
+            default 6
             range 1 48
 
         config DAP_PIN_TDO
