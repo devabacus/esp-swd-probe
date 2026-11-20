@@ -99,6 +99,13 @@ void int2array(uint8_t *res, uint32_t data, uint8_t len)
     }
 }
 
+// Сброс цели ногой nRESET (активный уровень 0). Определение нужно, когда swd_host
+// линкуется в образ (RTT-MQTT зовёт swd_init_debug): до этого его никто не вызывал.
+void swd_set_target_reset(uint8_t asserted)
+{
+    PIN_nRESET_OUT(asserted ? 0 : 1);
+}
+
 uint8_t swd_transfer_retry(uint32_t req, uint32_t *data)
 {
     uint8_t i, ack;

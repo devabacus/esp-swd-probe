@@ -96,4 +96,50 @@ menu "wireless dap config"
         help
             Clock used until the host sets its own with DAP_SWJ_Clock.
             Default 1 MHz (not higher: a long wire or a level shifter will not keep up).
+    menu "RTT log over MQTT (SEGGER RTT of the target)"
+        config RTT_MQTT_DEFAULT_ENABLE
+            bool "Enable RTT-to-MQTT by default"
+            default n
+            help
+                Off by default: it uses the same SWD as OpenOCD/pyOCD, do not run both.
+                Overridable at runtime with NVS namespace "rtt", key "en" (u8).
+
+        config RTT_SEARCH_START
+            hex "RTT search window start (target RAM address)"
+            default 0x20000000
+            help
+                Default: RAM of nRF52840. NVS key "win_lo" (u32) overrides.
+
+        config RTT_SEARCH_END
+            hex "RTT search window end (exclusive)"
+            default 0x20040000
+            help
+                NVS key "win_hi" (u32) overrides.
+
+        config RTT_POLL_MS
+            int "Poll period of the up-0 buffer, ms"
+            default 100
+            range 10 10000
+            help
+                NVS key "poll_ms" (u32) overrides.
+
+        config RTT_MQTT_URI
+            string "MQTT broker URI (mqtt://host:1883)"
+            default ""
+            help
+                Empty: not started. Not stored in git: set in menuconfig / local sdkconfig,
+                or NVS key "uri". Topic: rtt/<wifi-sta-mac lowercase>.
+
+        config RTT_MQTT_USER
+            string "MQTT user"
+            default ""
+            help
+                NVS key "user" overrides.
+
+        config RTT_MQTT_PASSWORD
+            string "MQTT password"
+            default ""
+            help
+                Not stored in git. NVS key "pass" overrides.
+    endmenu
 endmenu

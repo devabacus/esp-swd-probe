@@ -20,6 +20,7 @@
 #include "main/wifi_configuration.h"
 #include "main/wifi_handle.h"
 #include "main/usb_dap.h"
+#include "main/rtt_mqtt.h"
 
 #include "components/corsacOTA/src/corsacOTA.h"
 
@@ -106,6 +107,7 @@ void app_main() {
     DAP_Setup();
     timer_init(); // timestamps for DAP (get_timer_count)
     usb_dap_start();
+    rtt_mqtt_start();
     return;
 #endif
 
@@ -158,4 +160,6 @@ void app_main() {
 #if (USE_UART_BRIDGE == 1)
     xTaskCreate(uart_bridge_task, "uart_server", UART_BRIDGE_TASK_STACK_SIZE, NULL, 2, NULL);
 #endif
+
+    rtt_mqtt_start();
 }
