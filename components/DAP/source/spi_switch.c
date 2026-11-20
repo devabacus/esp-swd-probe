@@ -11,10 +11,10 @@
  * @copyright MIT License
  *
  */
+#include "sdkconfig.h"
 #if defined CONFIG_IDF_TARGET_ESP32S3
 #include "hal/dedic_gpio_ll.h"
 #endif
-#include "sdkconfig.h"
 #ifdef CONFIG_IDF_TARGET_ESP32S3
 #include "esp_rom_gpio.h"
 #endif

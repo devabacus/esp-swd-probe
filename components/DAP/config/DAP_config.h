@@ -147,7 +147,14 @@ This information includes:
 /// This configuration settings is used to optimize the communication performance with the
 /// debugger and depends on the USB peripheral. For devices with limited RAM or USB buffer the
 /// setting can be reduced (valid range is 1 .. 255).
+#if defined CONFIG_IDF_TARGET_ESP32S3
+// Нативный USB S3 (main/usb_dap.c): vendor-FIFO 64 байта читается потоком, границ пакетов нет — при очереди
+// запросов два коротких склеиваются в одно чтение, второй теряется («CMSIS-DAP command mismatch», стенд 20.11).
+// Один пакет в пути — хост ждёт ответ перед следующим. Ускорение — чтение по границам передач (следующая правка).
+#define DAP_PACKET_COUNT 1
+#else
 #define DAP_PACKET_COUNT 255 ///< Specifies number of packets buffered.
+#endif
 
 /// Indicates that the SWO function(UART SWO & Streaming Trace) is available
 #define SWO_FUNCTION_ENABLE 0 ///< SWO function:  1 = available, 0 = not available.
