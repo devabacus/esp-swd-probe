@@ -23,6 +23,7 @@
 #include "DAP_config.h" // DAP_PACKET_COUNT
 #include "main/dap_pktring.h"
 #include "main/usb_dap.h"
+#include "main/usb_serial.h"
 
 // Приём по границам передач работает ТОЛЬКО без FIFO (vendor_device.c: при CFG_TUD_VENDOR_TXRX_BUFFERED=1 tud_vendor_rx_cb
 // получает buffer=NULL, bufsize=0, данные остаются во FIFO — пакеты не доходят, хост видит «CMSIS-DAP command CMD_INFO failed»).
@@ -46,7 +47,7 @@ static const char *kStrings[] = {
     (const char[]){0x09, 0x04}, // 0: English
     "esp-swd-probe",            // 1: manufacturer
     "ESP32-S3 CMSIS-DAP",       // 2: product
-    "000001",                   // 3: serial
+    "000000000000",             // 3: serial — подменяется MAC платы в usb_dap_start (usb_serial_get)
     "ESP32-S3 CMSIS-DAP v2",    // 4: interface (must contain "CMSIS-DAP")
 };
 
@@ -182,6 +183,7 @@ static void dap_usb_task(void *arg)
 
 void usb_dap_start(void)
 {
+    kStrings[STR_SERIAL] = usb_serial_get(); // у каждой платы свой серийный (раньше у всех «000001»)
     tinyusb_config_t cfg = TINYUSB_DEFAULT_CONFIG();
     cfg.descriptor.device = &kDevice;
     cfg.descriptor.string = kStrings;

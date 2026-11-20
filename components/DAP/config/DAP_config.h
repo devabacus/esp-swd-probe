@@ -261,8 +261,10 @@ __STATIC_INLINE uint8_t DAP_GetProductString(char *str)
  */
 __STATIC_INLINE uint8_t DAP_GetSerNumString(char *str)
 {
-  strcpy(str, "1234");
-  return (sizeof("1234"));
+  extern const char *usb_serial_get(void); // main/usb_serial_esp.c: MAC платы — у копий программатора разные номера
+  const char *s = usb_serial_get();
+  strcpy(str, s);
+  return (uint8_t)(strlen(s) + 1);
 }
 
 /**

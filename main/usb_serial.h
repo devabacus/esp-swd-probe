@@ -8,3 +8,6 @@
 
 // out — буфер не меньше USB_SERIAL_LEN + 1.
 void usb_serial_from_mac(const uint8_t mac[6], char out[USB_SERIAL_LEN + 1]);
+
+// Серийный номер этой платы (usb_serial_esp.c, только в прошивке): MAC из eFuse, строка живёт всё время работы.
+const char *usb_serial_get(void);

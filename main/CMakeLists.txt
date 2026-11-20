@@ -1,5 +1,5 @@
 set(COMPONENT_ADD_INCLUDEDIRS "${PROJECT_PATH}")
-set(COMPONENT_SRCS
+set(COMPONENT_SRCS "usb_serial.c" "usb_serial_esp.c"
     main.c timer.c tcp_server.c usbip_server.c DAP_handle.c
     uart_bridge.c wifi_handle.c)
 
