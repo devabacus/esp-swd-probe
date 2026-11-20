@@ -1,0 +1,11 @@
+среда 1bf22b433697
+== cloud-env-sync, хвост:
+== fw-prepare
+ВНИМАНИЕ: FW_SECRETS_B64 не задана или пуста — файла секретов /root/sdkconfig.secrets.cloud-stub нет; сборка прошивки с секретами откажет в check_secrets.py, задания без сборки идут (переменная — в Environment variables среды)
+esp-diag: нет /home/user/esp-diag
+esp-smp: нет /home/user/esp-smp
+== конец cloud-env-sync
+GREEN
+OK usb_serial
+/root/run.sh: line 118: idf.py: command not found
+artifacts: пусто
