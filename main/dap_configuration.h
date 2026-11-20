@@ -1,6 +1,8 @@
 #ifndef __DAP_CONFIGURATION_H__
 #define __DAP_CONFIGURATION_H__
 
+#include "sdkconfig.h"
+
 /**
  * @brief Specify the use of WINUSB
  *
@@ -33,7 +35,9 @@
 /// debugger and depends on the USB peripheral. Typical vales are 64 for Full-speed USB HID or WinUSB,
 /// 1024 for High-speed USB HID and 512 for High-speed USB WinUSB.
 
-#if (USE_WINUSB == 1)
+#if defined(CONFIG_DAP_TRANSPORT_USB)
+    #define DAP_PACKET_SIZE 64U // native USB of ESP32-S3 is full-speed: bulk packet 64
+#elif (USE_WINUSB == 1)
     #define DAP_PACKET_SIZE 512U // 512 for WinUSB.
 #else
     #define DAP_PACKET_SIZE 255U // 255 for USB HID

@@ -136,7 +136,11 @@ This information includes:
 /// Default communication speed on the Debug Access Port for SWD and JTAG mode.
 /// Used to initialize the default SWD/JTAG clock frequency.
 /// The command \ref DAP_SWJ_Clock can be used to overwrite this default setting.
+#ifdef CONFIG_DAP_SWD_CLOCK_HZ
+#define DAP_DEFAULT_SWJ_CLOCK ((uint32_t)CONFIG_DAP_SWD_CLOCK_HZ) ///< Default SWD/JTAG clock (Kconfig).
+#else
 #define DAP_DEFAULT_SWJ_CLOCK 1000000U ///< Default SWD/JTAG clock frequency in Hz.
+#endif
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<1MHz
 
 /// Maximum Package Buffers for Command and Response data.
@@ -381,13 +385,24 @@ __STATIC_INLINE uint8_t DAP_GetProductFirmwareVersionString (char *str) {
   #define PIN_LED_CONNECTED _ // won't be used
   #define PIN_LED_RUNNING _ // won't be used
 #elif defined CONFIG_IDF_TARGET_ESP32S3
+  // Pins come from Kconfig (menuconfig -> wireless dap config -> Target interface)
   #define PIN_SWDIO _      // SPI MISO
-  #define PIN_SWDIO_MOSI 11 // SPI MOSI
-  #define PIN_SWCLK 12
-  #define PIN_TDO 9        // device TDO -> Host Data Input
-  #define PIN_TDI 10
-  #define PIN_nTRST 14       // optional
-  #define PIN_nRESET 13
+  #define PIN_SWDIO_MOSI CONFIG_DAP_PIN_SWDIO // SPI MOSI
+  #define PIN_SWCLK CONFIG_DAP_PIN_SWCLK
+  #define PIN_TDO CONFIG_DAP_PIN_TDO        // device TDO -> Host Data Input
+  #define PIN_TDI CONFIG_DAP_PIN_TDI
+  #define PIN_nTRST CONFIG_DAP_PIN_NTRST       // optional
+  #define PIN_nRESET CONFIG_DAP_PIN_NRESET
+
+  // Forbidden on ESP32-S3: strapping 0/3/45/46, native USB 19/20, flash/PSRAM 26..37
+  #define DAP_PIN_FORBIDDEN(p) ((p) == 0 || (p) == 3 || (p) == 45 || (p) == 46 || \
+                                (p) == 19 || (p) == 20 || ((p) >= 26 && (p) <= 37))
+  _Static_assert(!DAP_PIN_FORBIDDEN(CONFIG_DAP_PIN_SWDIO), "DAP_PIN_SWDIO: forbidden GPIO");
+  _Static_assert(!DAP_PIN_FORBIDDEN(CONFIG_DAP_PIN_SWCLK), "DAP_PIN_SWCLK: forbidden GPIO");
+  _Static_assert(!DAP_PIN_FORBIDDEN(CONFIG_DAP_PIN_NRESET), "DAP_PIN_NRESET: forbidden GPIO");
+  _Static_assert(!DAP_PIN_FORBIDDEN(CONFIG_DAP_PIN_TDO), "DAP_PIN_TDO: forbidden GPIO");
+  _Static_assert(!DAP_PIN_FORBIDDEN(CONFIG_DAP_PIN_TDI), "DAP_PIN_TDI: forbidden GPIO");
+  _Static_assert(!DAP_PIN_FORBIDDEN(CONFIG_DAP_PIN_NTRST), "DAP_PIN_NTRST: forbidden GPIO");
 
   #define PIN_LED_CONNECTED _ // won't be used
   #define PIN_LED_RUNNING _ // won't be used

@@ -19,6 +19,7 @@
 #include "main/timer.h"
 #include "main/wifi_configuration.h"
 #include "main/wifi_handle.h"
+#include "main/usb_dap.h"
 
 #include "components/corsacOTA/src/corsacOTA.h"
 
@@ -99,6 +100,14 @@ void app_main() {
     // }
 
     ESP_ERROR_CHECK(nvs_flash_init());
+
+#if defined(CONFIG_DAP_TRANSPORT_USB)
+    // CMSIS-DAP v2 over native USB: no Wi-Fi, no USB/IP
+    DAP_Setup();
+    timer_init(); // timestamps for DAP (get_timer_count)
+    usb_dap_start();
+    return;
+#endif
 
 #if (USE_UART_BRIDGE == 1)
     uart_bridge_init();

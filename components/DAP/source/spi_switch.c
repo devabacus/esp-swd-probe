@@ -12,6 +12,9 @@
  *
  */
 #include "sdkconfig.h"
+#ifdef CONFIG_IDF_TARGET_ESP32S3
+#include "esp_rom_gpio.h"
+#endif
 
 #include <stdbool.h>
 
@@ -368,6 +371,12 @@ void DAP_SPI_Init()
     DAP_SPI.user.usr_addr = 0;
 }
 #elif defined CONFIG_IDF_TARGET_ESP32S3
+// SWCLK = FSPICLK, SWDIO = FSPID (pins from Kconfig, see DAP_config.h).
+// Default pins 11/12 are the IO_MUX pins of FSPI (direct, fastest);
+// any other pin is routed through the GPIO matrix.
+#define DAP_SPI_PIN_CLK  CONFIG_DAP_PIN_SWCLK
+#define DAP_SPI_PIN_MOSI CONFIG_DAP_PIN_SWDIO
+#define DAP_SPI_IOMUX_DIRECT (DAP_SPI_PIN_CLK == 12 && DAP_SPI_PIN_MOSI == 11)
 void DAP_SPI_Init()
 {
     PERIPH_RCC_ATOMIC() {
@@ -377,22 +386,36 @@ void DAP_SPI_Init()
 
     // In esp32, the driving of GPIO should be stopped,
     // otherwise there will be issue in the spi
-    gpio_ll_set_level(&GPIO, GPIO_NUM_12, 0);
-    gpio_ll_set_level(&GPIO, GPIO_NUM_11, 0);
+    gpio_ll_set_level(&GPIO, DAP_SPI_PIN_CLK, 0);
+    gpio_ll_set_level(&GPIO, DAP_SPI_PIN_MOSI, 0);
 
+#if DAP_SPI_IOMUX_DIRECT
     // We will use IO_MUX to get the maximum speed.
     gpio_ll_set_input_signal_from(&GPIO, FSPICLK_IN_IDX, false);
-    gpio_ll_input_enable(&GPIO, GPIO_NUM_12); // SCLK
-    gpio_ll_set_output_enable_ctrl(&GPIO, GPIO_NUM_12, true, false);
-    gpio_ll_func_sel(&GPIO, GPIO_NUM_12, FUNC_GPIO12_FSPICLK);
+    gpio_ll_input_enable(&GPIO, DAP_SPI_PIN_CLK); // SCLK
+    gpio_ll_set_output_enable_ctrl(&GPIO, DAP_SPI_PIN_CLK, true, false);
+    gpio_ll_func_sel(&GPIO, DAP_SPI_PIN_CLK, FUNC_GPIO12_FSPICLK);
 
     gpio_ll_set_input_signal_from(&GPIO, FSPID_IN_IDX, false);
-    gpio_ll_input_enable(&GPIO, GPIO_NUM_11); // MOSI
-    gpio_ll_set_output_enable_ctrl(&GPIO, GPIO_NUM_11, true, false);
-    gpio_ll_func_sel(&GPIO, GPIO_NUM_11, FUNC_GPIO11_FSPID);
+    gpio_ll_input_enable(&GPIO, DAP_SPI_PIN_MOSI); // MOSI
+    gpio_ll_set_output_enable_ctrl(&GPIO, DAP_SPI_PIN_MOSI, true, false);
+    gpio_ll_func_sel(&GPIO, DAP_SPI_PIN_MOSI, FUNC_GPIO11_FSPID);
+#else
+    // GPIO matrix: arbitrary pins (slower edges, enough for SWD up to a few MHz)
+    gpio_ll_func_sel(&GPIO, DAP_SPI_PIN_CLK, PIN_FUNC_GPIO);
+    gpio_ll_func_sel(&GPIO, DAP_SPI_PIN_MOSI, PIN_FUNC_GPIO);
+    gpio_ll_input_enable(&GPIO, DAP_SPI_PIN_CLK);
+    gpio_ll_input_enable(&GPIO, DAP_SPI_PIN_MOSI);
+    gpio_ll_set_output_enable_ctrl(&GPIO, DAP_SPI_PIN_CLK, true, false);
+    gpio_ll_set_output_enable_ctrl(&GPIO, DAP_SPI_PIN_MOSI, true, false);
+    esp_rom_gpio_connect_out_signal(DAP_SPI_PIN_CLK, FSPICLK_OUT_IDX, false, false);
+    esp_rom_gpio_connect_in_signal(DAP_SPI_PIN_CLK, FSPICLK_IN_IDX, false);
+    esp_rom_gpio_connect_out_signal(DAP_SPI_PIN_MOSI, FSPID_OUT_IDX, false, false);
+    esp_rom_gpio_connect_in_signal(DAP_SPI_PIN_MOSI, FSPID_IN_IDX, false);
+#endif
 
-    GPIO.func_out_sel_cfg[GPIO_NUM_11].oen_sel = 0;
-    GPIO.func_out_sel_cfg[GPIO_NUM_12].oen_sel = 0;
+    GPIO.func_out_sel_cfg[DAP_SPI_PIN_MOSI].oen_sel = 0;
+    GPIO.func_out_sel_cfg[DAP_SPI_PIN_CLK].oen_sel = 0;
 
     // Not using DMA
     DAP_SPI.user.usr_conf_nxt = 0;
@@ -516,23 +539,23 @@ __FORCEINLINE void DAP_SPI_Deinit()
 #elif defined CONFIG_IDF_TARGET_ESP32S3
 __FORCEINLINE void DAP_SPI_Deinit()
 {
-    gpio_ll_func_sel(&GPIO, GPIO_NUM_12, PIN_FUNC_GPIO);
-    gpio_ll_func_sel(&GPIO, GPIO_NUM_11, PIN_FUNC_GPIO); // MOSI
+    gpio_ll_func_sel(&GPIO, CONFIG_DAP_PIN_SWCLK, PIN_FUNC_GPIO);
+    gpio_ll_func_sel(&GPIO, CONFIG_DAP_PIN_SWDIO, PIN_FUNC_GPIO); // MOSI
 
     // SWCLK output
-    GPIO.func_out_sel_cfg[GPIO_NUM_12].func_sel = CORE1_GPIO_OUT1_IDX;
-    GPIO.func_out_sel_cfg[GPIO_NUM_12].oen_sel = 1;
-    gpio_ll_output_enable(&GPIO, GPIO_NUM_12);
+    GPIO.func_out_sel_cfg[CONFIG_DAP_PIN_SWCLK].func_sel = CORE1_GPIO_OUT1_IDX;
+    GPIO.func_out_sel_cfg[CONFIG_DAP_PIN_SWCLK].oen_sel = 1;
+    gpio_ll_output_enable(&GPIO, CONFIG_DAP_PIN_SWCLK);
 
     // SWDIO outout
-    GPIO.func_out_sel_cfg[GPIO_NUM_11].func_sel = CORE1_GPIO_OUT0_IDX;
-    GPIO.func_out_sel_cfg[GPIO_NUM_11].oen_sel = 1;
-    gpio_ll_output_enable(&GPIO, GPIO_NUM_11);
+    GPIO.func_out_sel_cfg[CONFIG_DAP_PIN_SWDIO].func_sel = CORE1_GPIO_OUT0_IDX;
+    GPIO.func_out_sel_cfg[CONFIG_DAP_PIN_SWDIO].oen_sel = 1;
+    gpio_ll_output_enable(&GPIO, CONFIG_DAP_PIN_SWDIO);
 
     // SWDIO input
     GPIO.func_in_sel_cfg[CORE1_GPIO_IN0_IDX].sig_in_sel = 1;
-    GPIO.func_in_sel_cfg[CORE1_GPIO_IN0_IDX].func_sel = GPIO_NUM_11;
-    gpio_ll_input_enable(&GPIO, GPIO_NUM_11);
+    GPIO.func_in_sel_cfg[CORE1_GPIO_IN0_IDX].func_sel = CONFIG_DAP_PIN_SWDIO;
+    gpio_ll_input_enable(&GPIO, CONFIG_DAP_PIN_SWDIO);
 }
 #endif
 
@@ -583,7 +606,11 @@ __FORCEINLINE void DAP_SPI_Release()
  */
 __FORCEINLINE void DAP_SPI_Acquire()
 {
-    gpio_ll_func_sel(&GPIO, GPIO_NUM_12, FUNC_GPIO12_FSPICLK);
+#if DAP_SPI_IOMUX_DIRECT
+    gpio_ll_func_sel(&GPIO, CONFIG_DAP_PIN_SWCLK, FUNC_GPIO12_FSPICLK);
+#else
+    GPIO.func_out_sel_cfg[CONFIG_DAP_PIN_SWCLK].func_sel = FSPICLK_OUT_IDX;
+#endif
 }
 
 
@@ -593,6 +620,10 @@ __FORCEINLINE void DAP_SPI_Acquire()
  */
 __FORCEINLINE void DAP_SPI_Release()
 {
-    gpio_ll_func_sel(&GPIO, GPIO_NUM_12, FUNC_GPIO12_GPIO12);
+#if DAP_SPI_IOMUX_DIRECT
+    gpio_ll_func_sel(&GPIO, CONFIG_DAP_PIN_SWCLK, FUNC_GPIO12_GPIO12);
+#else
+    GPIO.func_out_sel_cfg[CONFIG_DAP_PIN_SWCLK].func_sel = CORE1_GPIO_OUT1_IDX;
+#endif
 }
 #endif

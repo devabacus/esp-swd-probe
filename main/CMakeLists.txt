@@ -7,4 +7,8 @@ if(CONFIG_USE_WEBSOCKET_DAP)
     list(APPEND COMPONENT_SRCS "websocket_server.c")
 endif()
 
+if(CONFIG_DAP_TRANSPORT_USB)
+    list(APPEND COMPONENT_SRCS "usb_dap.c")
+endif()
+
 register_component()

@@ -1,4 +1,99 @@
 menu "wireless dap config"
     config USE_WEBSOCKET_DAP
         bool "Enable the websocket dap feature"
+
+    choice DAP_TRANSPORT
+        prompt "Transport to the host"
+        default DAP_TRANSPORT_USB if IDF_TARGET_ESP32S3
+        default DAP_TRANSPORT_WIFI_USBIP
+        help
+            USB: CMSIS-DAP v2 (WinUSB bulk) over the native USB of the ESP32-S3
+            (GPIO19/GPIO20). No Wi-Fi is started. Works with pyOCD, OpenOCD, probe-rs.
+            Wi-Fi USB/IP: original wireless-esp8266-dap mode (needs Wi-Fi settings below).
+
+        config DAP_TRANSPORT_USB
+            bool "USB (CMSIS-DAP v2, native USB, ESP32-S2/S3)"
+            depends on IDF_TARGET_ESP32S3
+
+        config DAP_TRANSPORT_WIFI_USBIP
+            bool "Wi-Fi (USB/IP)"
+    endchoice
+
+    config DAP_USB_VID
+        int "USB vendor ID (USB transport)"
+        depends on DAP_TRANSPORT_USB
+        default 12346
+        help
+            Default 0x303A (Espressif). Decimal.
+
+    config DAP_USB_PID
+        int "USB product ID (USB transport)"
+        depends on DAP_TRANSPORT_USB
+        default 16385
+        help
+            Default 0x4001. Decimal. Check it does not clash with the devkit's
+            own USB-Serial-JTAG (0x1001) when both are plugged in.
+
+    menu "Wi-Fi (used only in the Wi-Fi transport)"
+        config DAP_WIFI_SSID
+            string "Wi-Fi SSID"
+            default ""
+            help
+                Network name. Empty value: the device does not connect to Wi-Fi.
+
+        config DAP_WIFI_PASSWORD
+            string "Wi-Fi password"
+            default ""
+            help
+                Not stored in git: set it in menuconfig or in a local sdkconfig.
+    endmenu
+
+    menu "Target interface (ESP32-S3)"
+        depends on IDF_TARGET_ESP32S3
+
+        config DAP_PIN_SWDIO
+            int "SWDIO GPIO (SPI MOSI)"
+            default 11
+            range 1 48
+            help
+                Free GPIO of the devkit. Forbidden: 0, 3, 45, 46 (strapping),
+                19, 20 (native USB), 26..37 (flash/PSRAM). Checked at build time.
+                11 is the IO_MUX pin of FSPID (fastest); other pins go through the
+                GPIO matrix (see README-RU.md).
+
+        config DAP_PIN_SWCLK
+            int "SWCLK GPIO (SPI CLK)"
+            default 12
+            range 1 48
+            help
+                Same limits as SWDIO. 12 is the IO_MUX pin of FSPICLK.
+
+        config DAP_PIN_NRESET
+            int "nRESET GPIO"
+            default 13
+            range 1 48
+
+        config DAP_PIN_TDO
+            int "JTAG TDO GPIO (only for JTAG)"
+            default 9
+            range 1 48
+
+        config DAP_PIN_TDI
+            int "JTAG TDI GPIO (only for JTAG)"
+            default 10
+            range 1 48
+
+        config DAP_PIN_NTRST
+            int "JTAG nTRST GPIO (only for JTAG)"
+            default 14
+            range 1 48
+    endmenu
+
+    config DAP_SWD_CLOCK_HZ
+        int "Default SWD/JTAG clock, Hz"
+        default 1000000
+        range 1000 40000000
+        help
+            Clock used until the host sets its own with DAP_SWJ_Clock.
+            Default 1 MHz (not higher: a long wire or a level shifter will not keep up).
 endmenu
